@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MoodTube</title>
+    <link rel="stylesheet" href="/static/css/global.css" />
+    <link rel="stylesheet" href="/static/css/search_url.css" />
+
+    <script
+      src="https://kit.fontawesome.com/3d8df9be04.js"
+      crossorigin="anonymous"
+    ></script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="navbar">
+        <div class="navbar-a">
+          <img src="/static/assets/img/logo.png" alt="" />
+        </div>
+        <div class="navbar-b">
+          <!--          <a href=""><button>LOGIN</button></a>-->
+          <!-- <img src="static/assets/img/profilee.jpg" alt="" /> -->
+        </div>
+      </div>
+
+      <div class="hero">
+        <div class="heading"><p>Search and Know</p></div>
+        <div class="heading"><p>Before Watch</p></div>
+        <div class="sub-heading">Ready to Analyse? Enter the video link.</div>
+
+        <!-- my approach -->
+
+        <form id="analyze-form" method="POST" action="/analyze" class="form">
+          <input
+            type="url"
+            name="url"
+            id="url-type"
+            placeholder="Youtube URL"
+            required
+          />
+          <input type="submit" id="url-submit" value="Get Started &rarr;" />
+        </form>
+      </div>
+    </div>
+  </body>
+</html>
