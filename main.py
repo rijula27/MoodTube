@@ -21,13 +21,12 @@ matplotlib.use('Agg')  # Use a non-interactive backend
 import matplotlib.pyplot as plt
 
 app = Flask(__name__)
-API_KEY = 'AIzaSyC34p2e3EnJX0OLXLhd4DWZRFROQ5MyvAk'  # Replace with your valid YouTube API Key
+API_KEY = ''  # Replace with your valid YouTube API Key
 youtube = build('youtube', 'v3', developerKey=API_KEY)
 
 app.secret_key = "moodtube_secret_key"
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/moodtube'
 
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://RijulAli:Moodtube123#@RijulAli.mysql.pythonanywhere-services.com/RijulAli$moodtube'
 
 
 
