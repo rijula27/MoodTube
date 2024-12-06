@@ -32,7 +32,7 @@
       </header>
       <div class="moodtube-container">
         {% for record in history_data %}
-        <div class="video-card">
+        <div class="video-card" data-id="{{ record.search_id }}">
           <div class="card-content">
             <p class="channel-name">{{ record.channel_name }}</p>
             <p class="video-title">{{ record.video_title }}</p>
@@ -43,11 +43,63 @@
             class="download-button"
             >Download</a
           >
+          <div class="delete-box">
+            <i class="fa-solid fa-trash delete-button"></i>
+          </div>
         </div>
 
         {% endfor %}
       </div>
       <a href="/logout"><button class="logout">Logout</button></a>
     </div>
+
+    <div class="delete-card">
+      <p>Are you sure ?</p>
+      <div class="d-button">
+        <button class="delete-cancel">Cancel</button>
+        <button class="delete-yes">Yes</button>
+      </div>
+    </div>
+
+    <script>
+      const deleteButton = document.querySelectorAll(".delete-button");
+      const popup = document.querySelector(".delete-card");
+      const delete_cancel = document.querySelector(".delete-cancel");
+      const delete_yes = document.querySelector(".delete-yes");
+      let currentvideoId = null;
+
+      deleteButton.forEach((button) => {
+        button.addEventListener("click", function () {
+          popup.style.display = "block";
+
+          const card = this.closest(".video-card");
+          currentvideoId = card.getAttribute("data-id");
+          console.log(currentvideoId);
+        });
+      });
+
+      delete_cancel.addEventListener("click", function () {
+        popup.style.display = "none";
+        currentvideoId = null;
+      });
+
+      delete_yes.addEventListener("click", () => {
+        fetch("/delete_video", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ search_id: currentvideoId }),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            console.log("Resoponse from server: ", data);
+            window.location.reload();
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+          });
+      });
+    </script>
   </body>
 </html>

@@ -18,7 +18,15 @@
         <div class="navbar-a">
           <img src="/static/assets/img/logo.png" alt="" />
         </div>
-        <div class="navbar-b"></div>
+        <div class="navbar-b">
+          <!--          <a href=""><button>LOGIN</button></a>-->
+          <!-- <img src="static/assets/img/profilee.jpg" alt="" /> -->
+          {% if not is_logged_in %}
+          <a href="/login"><button>LOGIN</button></a>
+          {% else %}
+          <a href="/history"><button>HISTORY</button></a>
+          {% endif %}
+        </div>
       </div>
 
       <div class="hero">

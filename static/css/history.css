@@ -7,6 +7,12 @@ body {
   padding: 0;
 }
 
+/* .flex {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+} */
+
 .moodtube-container {
   max-width: 1000px;
   margin: 0 auto 1rem;
@@ -43,12 +49,32 @@ body {
   box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
   margin-bottom: 20px;
   padding: 20px;
+  position: relative;
 }
 
 .card-content {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  /* border: solid; */
+  flex-grow: 1; /* Allow this section to take up available space */
+}
+
+.delete-box {
+  position: absolute;
+  top: 10px; /* Adjust the position as needed */
+  right: 10px; /* Keep the delete button in the top-right corner */
+}
+
+.delete-button {
+  color: rgb(0, 0, 0);
+  /* border: solid; */
+  cursor: pointer;
+}
+
+.delete-button:hover {
+  color: #ff0000;
+  scale: 1.2;
 }
 
 .channel-name {
@@ -68,6 +94,8 @@ body {
 }
 
 .download-button {
+  /* position: absolute; */
+  text-decoration: none;
   background-color: red;
   color: white;
   padding: 10px 15px;
@@ -76,6 +104,7 @@ body {
   font-size: 16px;
   cursor: pointer;
   transition: background-color 0.3s;
+  margin-left: auto;
 }
 
 .download-button:hover {
@@ -130,4 +159,59 @@ body {
   border: none;
   cursor: pointer;
   margin-left: 1rem;
+}
+
+.delete-card {
+  /* border: solid; */
+  width: 200px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 1rem;
+  background-color: rgba(255, 0, 0, 0.523);
+  border-radius: 8px;
+  display: none;
+  animation: popupAnimation 0.5s ease-out forwards;
+  /* color: rgba(255, 255, 255, 0.353); */
+}
+
+.delete-card p {
+  font-size: 1.5rem;
+  font-weight: 700;
+  /* border: solid; */
+  margin-top: 0;
+}
+
+.delete-card .d-button {
+  display: flex;
+  justify-content: space-between;
+}
+
+.delete-card .d-button button {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background-color: red;
+  color: white;
+  font-size: 1rem;
+}
+
+.delete-card .d-button button:hover {
+  background-color: #ff0000;
+  scale: 1.1;
+}
+
+@keyframes popupAnimation {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateY(-50px) scale(0.8);
+  }
+  60% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateY(10px) scale(1);
+  }
+  100% {
+    transform: translate(-50%, -50%) translateY(0) scale(1);
+  }
 }

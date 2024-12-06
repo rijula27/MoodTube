@@ -1,8 +1,12 @@
-from flask import Flask, render_template, request, redirect, session, make_response, jsonify, url_for, send_file
+from textwrap import wrap
+from flask import Flask, render_template, request, redirect, session, make_response, jsonify, url_for, send_file, flash
 from flask_sqlalchemy import SQLAlchemy
+from flask_mail import Mail, Message
 from googleapiclient.discovery import build
 import re
 import emoji
+from matplotlib import colors
+from reportlab.lib import colors
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 import matplotlib
 from datetime import datetime
@@ -10,18 +14,35 @@ from io import BytesIO
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
+from reportlab.pdfbase.pdfmetrics import stringWidth
 import os
 
-matplotlib.use('Agg')  
+matplotlib.use('Agg')  # Use a non-interactive backend
 import matplotlib.pyplot as plt
 
 app = Flask(__name__)
-API_KEY = 'Your API key' 
+API_KEY = 'AIzaSyC34p2e3EnJX0OLXLhd4DWZRFROQ5MyvAk'  # Replace with your valid YouTube API Key
 youtube = build('youtube', 'v3', developerKey=API_KEY)
 
 app.secret_key = "moodtube_secret_key"
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/moodtube'
 
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://RijulAli:Moodtube123#@RijulAli.mysql.pythonanywhere-services.com/RijulAli$moodtube'
+
+
+
+# Mail server configuration
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'rijul9848@gmail.com'  # Replace with your email
+app.config['MAIL_PASSWORD'] = 'pmpp ksls tewm iboo'  # Replace with your email password
+app.config['MAIL_DEFAULT_SENDER'] = 'rijul9848@gmail.com'
+app.config['MAIL_DEBUG'] = True
+
+
+# Initialize Flask-Mail
+mail = Mail(app)
 
 
 
@@ -69,42 +90,62 @@ class Sentimentanalysisresult(db.Model):
 
 @app.route("/")
 def home():
-    return render_template('index.html')
+    # return render_template('index.html')
+    is_logged_in = 'user_id' in session
+    return render_template('index.html', is_logged_in=is_logged_in)
 
 
 @app.route("/search", methods=['GET', 'POST'])
 def search():
+    is_logged_in = 'user_id' in session
     if request.method == "POST":
-
         # Get the search term
         search_term = request.form.get('search')
 
-        return redirect(url_for('dashboard'))  
+        return redirect(url_for('dashboard'))  # redirect to route named 'dashboard'
 
-    return render_template('search_url.html')
+    return render_template('search_url.html', is_logged_in=is_logged_in)
 
 
 @app.route("/signup", methods=['GET', 'POST'])
 def signup():
+    success = False
+    failure = False
+    message = None
     if request.method == 'POST':
         user_name = request.form.get('username')
         email = request.form.get('email')
         password = request.form.get('password')
 
-        
+
+        # Input validation
+        if not user_name or not email or not password:
+            failure = True
+            message = "All fields are required"
+            return render_template('login_signup.html', success=success, failure=failure, message=message)
+
+
+        # Check if the user already exists
         existing_user = User_account.query.filter_by(email=email).first()
         if existing_user:
-            return jsonify({"error": "User already exists"}), 400
+            failure = True
+            message = "User already exists"
+            return render_template('login_signup.html', success=success, failure=failure, message=message)
 
         entry = User_account(user_name=user_name, email=email, password=password)
         db.session.add(entry)
         db.session.commit()
+        success = True
+        message = "User created successfully"
 
-    return render_template('login_signup.html')
+    return render_template('login_signup.html',success=success, failure=failure, message=message)
 
 
 @app.route("/login", methods=['GET', 'POST'])
 def login():
+    success = False
+    failure = False
+    message = None
     if request.method == 'POST':
         login_credential = request.form.get('email_username')
         password = request.form.get('password')
@@ -128,9 +169,20 @@ def login():
             return redirect('/history')  # Redirect without remember me
 
         else:
-            return jsonify({"error": "Invalid login credentials"}), 401
+            failure = True
+            message = "Login Credential Invalid"
+            return render_template('login_signup.html', success=success, failure=failure, message=message)
 
-    return render_template('login_signup.html')
+    return render_template('login_signup.html', success = success, failure = failure, message = message)
+
+
+
+@app.route('/forgot_password')
+def forgot_password():
+    return render_template('forgot_password.html')
+
+
+
 
 
 @app.route('/analyze', methods=['GET', 'POST'])
@@ -227,6 +279,7 @@ def analyze():
 
 
 
+        # rComment1 = "NULL"
 
         # Convert the subscriber count to an integer if it's not 'N/A'
         if subscribers_count != 'N/A':
@@ -286,6 +339,8 @@ def analyze():
 
 
 
+
+# old method
 @app.route("/dashboard", methods=['GET', 'POST'])
 def dashboard():
     user_id = session.get('user_id')  # Fetch user_id from session
@@ -308,12 +363,13 @@ def dashboard():
 
 
 
+
 @app.route("/history")
 def history():
     if 'user_id' in session:
         user_id = session['user_id']
 
-        history_data = Sentimentanalysisresult.query.filter_by(user_id=user_id).all()
+        history_data = Sentimentanalysisresult.query.filter_by(user_id=user_id).order_by(Sentimentanalysisresult.date.desc()).all()
         return render_template("history.html", history_data=history_data)
     else:
         return redirect("/login")
@@ -341,9 +397,16 @@ def get_user(user_id):
         return jsonify({"error": "User not found"}), 404
 
 
+
+
+
+
+
+
 @app.route('/download_pdf/<int:video_id>')
 def download_pdf(video_id):
-    
+    # Fetch the corresponding record from the database
+    print(video_id)
     record = Sentimentanalysisresult.query.filter_by(search_id=video_id).first()
 
     if not record:
@@ -352,88 +415,153 @@ def download_pdf(video_id):
     # Create a PDF in memory
     pdf_buffer = BytesIO()
     pdf = canvas.Canvas(pdf_buffer, pagesize=letter)
-    width, height = letter  # Get the dimensions of the page
+    width, height = letter  # Dimensions of the page
 
-    # Set initial position
-    x = 30
-    y = 750
-    line_height = 20 
+    # Set the initial position and styling
+    x = 50  # Left margin
+    y = height - 50  # Top margin
+    line_height = 20  # Line spacing
 
-    # Prepare the text to display in the PDF
+    # Title styling
+    pdf.setFont("Helvetica-Bold", 24)
+    pdf.setFillColor(colors.darkblue)
+    title = "YouTube Sentiment Analysis Report"
+    title_width = stringWidth(title, "Helvetica-Bold", 24)
+    pdf.drawString((width - title_width) / 2, y, title)  # Center the title
+    y -= line_height * 2  # Move down after the title
+
+    # Prepare the text data with better styling
     text_lines = [
-        f"Video Title: {record.video_title}",
-        f"Channel Name: {record.channel_name}",
-        f"Total Comments: {record.total_comments}",
-        f"Overall Sentiment: {record.overall_sentiment}",
-        f"Most Positive Comments: {record.positive_comments}",
-        f"Most Negative Comments: {record.negative_comments}",
+        ("Video Title:", record.video_title),
+        ("Channel Name:", record.channel_name),
+        ("Total Comments:", str(record.total_comments)),
+        ("Overall Sentiment:", record.overall_sentiment),
+        ("Most Positive Comment:", record.positive_comments),
+        ("Most Negative Comment:", record.negative_comments)
     ]
 
-    # Draw the text lines with automatic line height adjustment
-    for line in text_lines:
-        # Automatically wrap text if it exceeds the width of the page
-        wrapped_lines = wrap_text(pdf, line, width - 60)  # 60 is a margin from the right edge
+    # Adding text with word wrapping and a clean style
+    for label, content in text_lines:
+        # Draw the label with bold style
+        pdf.setFont("Helvetica-Bold", 12)
+        pdf.setFillColor(colors.darkblue)
+        pdf.drawString(x, y, label)
+        y -= line_height  # Move down after the label
+
+        # Draw the content with normal style
+        pdf.setFont("Helvetica", 12)
+        pdf.setFillColor(colors.black)
+        wrapped_lines = wrap_text(content, max_width=80)  # Wrap text within margins
         for wrapped_line in wrapped_lines:
-            pdf.drawString(x, y, wrapped_line)
-            y -= line_height  # Move down for the next line
-        y -= line_height  # Add extra space after each main entry
+            if y < 50:  # Check if there's enough space for the next line
+                pdf.showPage()  # Create a new page
+                y = height - 50  # Reset y position for new page
+            pdf.drawString(x + 20, y, wrapped_line)  # Indent content
+            y -= line_height
 
-    # ** Add the pie chart image **
-    pie_chart_path = os.path.join('static/assets/chart_img/', record.pi_chart)  # Adjust the path as necessary
-    y = add_image_to_pdf(pdf, pie_chart_path, x, y)  # Update y position after adding image
+    # Function to add an image and check for space
+    def add_image(image_path, y_position):
+        if os.path.exists(image_path):
+            image_reader = ImageReader(image_path)
+            image_width, image_height = image_reader.getSize()  # Get actual image dimensions
+            aspect_ratio = image_width / float(image_height)
+            new_height = 300  # Set a larger desired height for the image
+            new_width = new_height * aspect_ratio  # Maintain aspect ratio
 
-    # ** Add the bar chart image **
-    bar_chart_path = os.path.join('static/assets/chart_img/', record.bar_chart)  # Adjust the path as necessary
-    y = add_image_to_pdf(pdf, bar_chart_path, x, y)  # Update y position after adding image
+            # Check if there's enough space for the image plus some padding
+            if y_position - new_height - 10 < 50:  # If not enough space, create a new page
+                pdf.showPage()  # Create a new page
+                y_position = height - 50  # Reset y position for new page
 
-    pdf.save()
-    pdf_buffer.seek(0)
+            # Draw the image centered
+            pdf.drawImage(image_reader, (width - new_width) / 2, y_position - new_height, width=new_width, height=new_height)  # Center the image
+            return y_position - new_height - 10  # Reduce space below the image
+        return y_position - line_height  # If image not found, just move down
+
+    # Add pie chart image
+    if record.pi_chart:
+        pie_chart_path = os.path.join('static/assets/chart_img/', record.pi_chart)
+        y = add_image(pie_chart_path, y)
+
+    # Add bar chart image
+    if record.bar_chart:
+        bar_chart_path = os.path.join('static/assets/chart_img/', record.bar_chart)
+        y = add_image(bar_chart_path, y)
+
+    # Finalize the PDF
+    pdf.showPage()  # Correct method to finalize the current page
+    pdf.save()  # Save the PDF to the buffer
+    pdf_buffer.seek(0)  # Move to the beginning of the BytesIO buffer
 
     # Send the PDF file to the user
-    return send_file(pdf_buffer, as_attachment=True, download_name=f"{record.video_title}.pdf")
+    return send_file(pdf_buffer, as_attachment=True, download_name='sentiment_analysis_report.pdf', mimetype='application/pdf')
 
-def wrap_text(pdf, text, max_width):
-    """Wrap text to fit within a specified width."""
-    words = text.split(' ')
-    lines = []
+def wrap_text(line, max_width):
+    words = line.split(' ')
+    wrapped_lines = []
     current_line = ""
 
     for word in words:
-        # Measure the width of the current line + new word
-        test_line = f"{current_line} {word}".strip()
-        text_width = pdf.stringWidth(test_line, 'Helvetica', 12)  # Adjust font and size as necessary
-
-        if text_width <= max_width:
-            current_line = test_line
+        if len(current_line + word) <= max_width:
+            current_line += word + " "
         else:
-            lines.append(current_line)  # Save the current line
-            current_line = word  # Start a new line with the current word
+            wrapped_lines.append(current_line.strip())
+            current_line = word + " "
 
-    if current_line:  # Add any remaining text
-        lines.append(current_line)
+    if current_line:
+        wrapped_lines.append(current_line.strip())
 
-    return lines
+    return wrapped_lines
 
-def add_image_to_pdf(pdf, image_path, x, y):
-    """Add an image to the PDF and return the new y position."""
-    if os.path.exists(image_path):
-        img = ImageReader(image_path)
-        # Get original dimensions of the image
-        img_width, img_height = img.getSize()
 
-        # Calculate the scaling factor to fit the image within the page width
-        max_width = 200  # Set your max width
-        scale = max_width / img_width if img_width > max_width else 1
-        new_height = img_height * scale
 
-        # Draw the image at the specified coordinates
-        pdf.drawImage(img, x, y, width=max_width, height=new_height, preserveAspectRatio=True)
 
-        # Return the new y position after adding the image, adjusting for some space
-        return y - new_height - 20  # 20 is extra space below the image
+@app.route('/delete_video', methods=['POST'])
+def delete_video():
+    data = request.get_json()  # Parse the incoming JSON data
+    search_id = data.get('search_id')  # Correctly access 'search_id' from the data
+
+    Sentimentanalysisresult.query.filter_by(search_id=search_id).delete()
+    db.session.commit()
+    response = {"success": True, 'message': 'Video deleted'}
+    return jsonify(response)
+
+
+
+
+@app.route("/send_email", methods=["POST"])
+def send_email():
+    email = request.form.get("email")
+    success = False
+    failure = False
+    message = None
+   
+    user = User_account.query.filter_by(email=email).first()
+    if user:
+        password = user.password
+        # Create the email message
+        msg = Message(
+            "Welcome to the Email Service Demo!",
+            recipients=[email],
+            body=f"Hello! Welcome to MoodTube. Your Password is {password}"
+        )
+        try:
+            mail.send(msg)                                                                            
+            flash("Email sent successfully!", "success")
+            success = True
+            message = "Password sent to your email"
+        except Exception as e:
+            failure = True
+            message = f"Failed to send email: {str(e)}"
     else:
-        pdf.drawString(x, y, "Image not found")  # Placeholder if the image doesn't exist
-        return y - 20  # Move down for the next line if image not found
+        failure = True
+        message = "User not found"
+
+    return render_template('login_signup.html', success=success, failure=failure, message=message)
+
+    
+
+
 
 
 @app.route('/logout')

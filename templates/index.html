@@ -7,13 +7,6 @@
     <link rel="stylesheet" href="/static/css/global.css" />
     <link rel="stylesheet" href="/static/css/style.css" />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
-      rel="stylesheet"
-    />
-
     <script
       src="https://kit.fontawesome.com/3d8df9be04.js"
       crossorigin="anonymous"
@@ -22,12 +15,16 @@
   <body>
     <div class="container">
       <div class="navbar">
+        {% if not is_logged_in %}
+        <a href="/login"><button>LOGIN</button></a>
+        {% endif %}
         <img src="/static/assets/img/logo.png" alt="" />
       </div>
       <div class="herof">
         <div class="hero">
           <p>Search and Know</p>
           <p>Before Watch</p>
+
           <a href="/search"
             ><button>
               Start Analyse <i class="fa-solid fa-arrow-right"></i></button

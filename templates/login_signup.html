@@ -47,6 +47,7 @@
                     <input type="checkbox" name="remember" class="remember-me-checkbox">
                     <span class="remember-me-text">Remember Me</span>
                   </label>
+                  <a id="forgot_password" href="/forgot_password">Forgot Password ?</a>
 
                   <input class="submit-button" type="submit">
               </form>
@@ -59,11 +60,17 @@
             </div>
         </div>
        </div>
+
+       <div class="popup">
+        <p></p>
+      </div>
     </div>
 
     <script>
-      document.getElementById("signup-btn").addEventListener("click", function(){
 
+      document.getElementById("signup-btn").addEventListener("click", function(){
+        // Select the form container
+        // const formContainer = document.querySelector(".form-container");
         const fcba = document.querySelector(".fcba");
         const fcaa = document.querySelector(".fcaa");
         console.log("clicked upto here")
@@ -84,7 +91,7 @@
 
       document.getElementById("login-btn").addEventListener("click", function(){
         // Select the form container
-       
+        // const formContainer = document.querySelector(".form-container");
         const fcba = document.querySelector(".fcba");
         const fcaa = document.querySelector(".fcaa");
 
@@ -103,6 +110,38 @@
 
 
       });
+
+    
+    // Safely embed the success flag using Jinja2
+    const success = {{ success | tojson | safe }};
+    const failure = {{ failure | tojson | safe }};
+    const message = "{{ message }}";
+
+    const popup = document.querySelector('.popup');
+
+
+    // Display popup if success is true
+    if (success || failure ) {
+        popup.style.display = 'block';
+
+        if (success){
+          popup.innerText = message;
+          popup.style.backgroundColor = "rgba(0, 128, 0, 0.707)"
+        }
+
+        if (failure){
+          popup.innerText = message;
+          popup.style.backgroundColor = "rgba(255, 0, 0, 0.625)";
+        }
+
+        setTimeout(() =>{
+          popup.style.display = 'none';
+        }, 3000);
+    }
+
+
+
+
     </script>
   </body>
 </html>
